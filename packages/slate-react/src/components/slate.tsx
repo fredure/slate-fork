@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Editor, Node, Descendant, Scrubber } from 'slate'
 import { ReactEditor } from '../plugin/react-editor'
 import { FocusedContext } from '../hooks/use-focused'
@@ -24,9 +24,10 @@ export const Slate = (props: {
   onChange?: (value: Descendant[]) => void
 }) => {
   const { editor, children, onChange, value, ...rest } = props
+  const [key, setKey] = useState(0)
   const unmountRef = useRef(false)
 
-  const [context, setContext] = React.useState<SlateContextValue>(() => {
+  const context = useMemo(() => {
     if (!Node.isNodeList(value)) {
       throw new Error(
         `[Slate] value is invalid! Expected a list of elements but got: ${Scrubber.stringify(
@@ -42,7 +43,7 @@ export const Slate = (props: {
     editor.children = value
     Object.assign(editor, rest)
     return { v: 0, editor }
-  })
+  }, [key, value, ...Object.values(rest)])
 
   const {
     selectorContext,
@@ -54,12 +55,9 @@ export const Slate = (props: {
       onChange(editor.children)
     }
 
-    setContext(prevContext => ({
-      v: prevContext.v + 1,
-      editor,
-    }))
+    setKey(key + 1)
     handleSelectorChange(editor)
-  }, [onChange])
+  }, [key, onChange])
 
   useEffect(() => {
     EDITOR_TO_ON_CHANGE.set(editor, onContextChange)

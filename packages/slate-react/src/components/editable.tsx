@@ -120,6 +120,7 @@ export type EditableProps = {
   renderLeaf?: (props: RenderLeafProps) => JSX.Element
   renderPlaceholder?: (props: RenderPlaceholderProps) => JSX.Element
   scrollSelectionIntoView?: (editor: ReactEditor, domRange: DOMRange) => void
+  scrollBoundary?: Function
   as?: React.ElementType
   disableDefaultStyles?: boolean
 } & React.TextareaHTMLAttributes<HTMLDivElement>
@@ -143,6 +144,7 @@ export const Editable = (props: EditableProps) => {
     renderLeaf,
     renderPlaceholder = defaultRenderPlaceholder,
     scrollSelectionIntoView = defaultScrollSelectionIntoView,
+    scrollBoundary = () => {},
     style: userStyle = {},
     as: Component = 'div',
     disableDefaultStyles = false,
@@ -367,7 +369,7 @@ export const Editable = (props: EditableProps) => {
             newDomRange.endOffset
           )
         }
-        scrollSelectionIntoView(editor, newDomRange)
+        scrollSelectionIntoView(editor, newDomRange, scrollBoundary)
       } else {
         domSelection.removeAllRanges()
       }
@@ -380,13 +382,6 @@ export const Editable = (props: EditableProps) => {
 
     if (!IS_ANDROID || !ensureSelection) {
       setTimeout(() => {
-        // COMPAT: In Firefox, it's not enough to create a range, you also need
-        // to focus the contenteditable element too. (2016/11/16)
-        if (newDomRange && IS_FIREFOX) {
-          const el = ReactEditor.toDOMNode(editor, editor)
-          el.focus()
-        }
-
         state.isUpdatingSelection = false
       })
       return
@@ -1688,7 +1683,8 @@ export const defaultDecorate: (entry: NodeEntry) => Range[] = () => []
 
 const defaultScrollSelectionIntoView = (
   editor: ReactEditor,
-  domRange: DOMRange
+  domRange: DOMRange,
+  boundary: CustomScrollBoundary
 ) => {
   // This was affecting the selection of multiple blocks and dragging behavior,
   // so enabled only if the selection has been collapsed.
@@ -1697,10 +1693,25 @@ const defaultScrollSelectionIntoView = (
     (!editor.selection ||
       (editor.selection && Range.isCollapsed(editor.selection)))
   ) {
-    const leafEl = domRange.startContainer.parentElement!
+    let leafEl = domRange.startContainer.parentElement!
     leafEl.getBoundingClientRect = domRange.getBoundingClientRect.bind(domRange)
+
+    const leafElRect = leafEl.getBoundingClientRect();
+    if (
+      leafEl &&
+      leafElRect.width === 0 &&
+      leafElRect.height === 0 &&
+      leafElRect.top === 0 &&
+      leafElRect.bottom === 0 &&
+      leafElRect.left === 0 &&
+      leafElRect.right === 0
+    ) {
+      leafEl = leafEl.parentElement as HTMLElement
+    }
+
     scrollIntoView(leafEl, {
       scrollMode: 'if-needed',
+      boundary
     })
 
     // @ts-expect-error an unorthodox delete D:
