@@ -472,7 +472,7 @@ export const Editable = (props: EditableProps) => {
           // causes duplicate inserts.
           event.data &&
           event.data.length === 1 &&
-          /[a-z ]/i.test(event.data) &&
+          /[a-zа-я\d-.?!)(,: ]/i.test(event.data) &&
           // Chrome has issues correctly editing the start of nodes: https://bugs.chromium.org/p/chromium/issues/detail?id=1249405
           // When there is an inline element, e.g. a link, and you select
           // right after it (the start of the next node).
@@ -1696,7 +1696,7 @@ const defaultScrollSelectionIntoView = (
     let leafEl = domRange.startContainer.parentElement!
     leafEl.getBoundingClientRect = domRange.getBoundingClientRect.bind(domRange)
 
-    const leafElRect = leafEl.getBoundingClientRect();
+    const leafElRect = leafEl.getBoundingClientRect()
     if (
       leafEl &&
       leafElRect.width === 0 &&
@@ -1711,7 +1711,7 @@ const defaultScrollSelectionIntoView = (
 
     scrollIntoView(leafEl, {
       scrollMode: 'if-needed',
-      boundary
+      boundary,
     })
 
     // @ts-expect-error an unorthodox delete D:
